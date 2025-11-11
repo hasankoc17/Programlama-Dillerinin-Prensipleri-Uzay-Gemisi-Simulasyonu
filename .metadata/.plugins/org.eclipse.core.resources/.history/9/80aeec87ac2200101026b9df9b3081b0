@@ -1,0 +1,80 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.util.ArrayList;
+import java.util.List;
+
+// DosyaOkuma sınıfı, txt dosyalarından verileri okuyup nesne listelerine dönüştürür.
+public class DosyaOkuma {
+
+    private static final DateTimeFormatter dateFormat = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.DAY_OF_MONTH)
+            .appendLiteral('.')
+            .appendValue(ChronoField.MONTH_OF_YEAR)
+            .appendLiteral('.')
+            .appendValue(ChronoField.YEAR)
+            .toFormatter();
+
+    public static List<Kisi> kisileriOku(String dosyaYolu) {
+        List<Kisi> kisiler = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(dosyaYolu))) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                String[] parcalar = satir.split("#");
+                String ad = parcalar[0];
+                int yas = Integer.parseInt(parcalar[1]);
+                int kalanOmur = Integer.parseInt(parcalar[2]);
+                String bulunduguArac = parcalar[3];
+
+                kisiler.add(new Kisi(ad, yas, kalanOmur, bulunduguArac));
+            }
+        } catch (Exception e) {
+            System.err.println("Kisiler.txt dosyası okunurken hata oluştu: " + e.getMessage());
+        }
+        return kisiler;
+    }
+
+    public static List<UzayAraci> uzayAraclariniOku(String dosyaYolu) {
+        List<UzayAraci> araclar = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(dosyaYolu))) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                String[] parcalar = satir.split("#");
+                String ad = parcalar[0];
+                String cikisGezegen = parcalar[1];
+                String varisGezegen = parcalar[2];
+                String cikisTarihHam = parcalar[3];
+                int mesafeSaat = Integer.parseInt(parcalar[4]);
+
+                LocalDate cikisDate = LocalDate.parse(cikisTarihHam.trim(), dateFormat);
+                String cikisTarih = cikisDate.format(DateTimeFormatter.ofPattern("dd.MM.uuuu"));
+
+                araclar.add(new UzayAraci(ad, cikisGezegen, varisGezegen, cikisTarih, mesafeSaat));
+            }
+        } catch (Exception e) {
+            System.err.println("Araclar.txt dosyası okunurken hata oluştu: " + e.getMessage());
+        }
+        return araclar;
+    }
+
+    public static List<Gezegen> gezegenleriOku(String dosyaYolu) {
+        List<Gezegen> gezegenler = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(dosyaYolu))) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                String[] parcalar = satir.split("#");
+                String ad = parcalar[0];
+                int gunSaat = Integer.parseInt(parcalar[1]);
+                String baslangicTarih = parcalar[2];
+
+                gezegenler.add(new Gezegen(ad, gunSaat, baslangicTarih));
+            }
+        } catch (Exception e) {
+            System.err.println("Gezegenler.txt dosyası okunurken hata oluştu: " + e.getMessage());
+        }
+        return gezegenler;
+    }
+}

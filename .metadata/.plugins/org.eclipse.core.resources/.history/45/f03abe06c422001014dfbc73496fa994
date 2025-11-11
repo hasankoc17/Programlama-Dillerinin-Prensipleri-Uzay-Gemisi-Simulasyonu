@@ -1,0 +1,133 @@
+
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// Simülasyonu yöneten ana sınıf
+public class Simulasyon {
+
+    /* ---------------- SABİT GENİŞLİKLER (mono‑space konsola göre) ---------------- */
+    private static final int GEZEGEN_SUTUN   = 15; // "--- X ---" + boşluklar dâhil
+    private static final int ARAC_ADI_W      = 6;
+    private static final int DURUM_W         = 8;
+    private static final int GEZEGEN_W       = 6;
+    private static final int KALANSAAT_W     = 8;
+    private static final int VARISTARIH_W    = 12;
+
+    /* --------------------------------------------------------------------------- */
+
+    private List<Gezegen>  gezegenler;
+    private List<UzayAraci> uzayAraclari;
+    private List<Kisi>      kisiler;
+
+    // ---------------------------------------------------------------------------
+    // main
+    // ---------------------------------------------------------------------------
+    public static void main(String[] args) {
+        new Simulasyon().baslat();
+    }
+
+    // ---------------------------------------------------------------------------
+    // Başlatıcı
+    // ---------------------------------------------------------------------------
+    public void baslat() {
+        try {
+            verileriYukle();
+            simulasyonuCalistir();
+            ekranTemizle();
+            ekraniYazdir();
+            System.out.println("Simülasyon tamamlandı.");
+        } catch (IOException e) {
+            System.err.println("Veriler okunurken hata: " + e.getMessage());
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Veri yükleme
+    // ---------------------------------------------------------------------------
+    private void verileriYukle() throws IOException {
+        // Gezegenler.txt → Gezegen listesi
+        gezegenler = DosyaOkuma.gezegenleriOku(Path.of("Gezegenler.txt"));
+
+        // Kolay erişim için ada göre harita
+        Map<String, Gezegen> gezegenHarita = new HashMap<>();
+        for (Gezegen g : gezegenler) gezegenHarita.put(g.getAd(), g);
+
+        // Araclar.txt → Uzay araçları
+        Map<String, UzayAraci> aracHarita = DosyaOkuma.araclariOku(Path.of("Araclar.txt"), gezegenHarita);
+        uzayAraclari = new ArrayList<>(aracHarita.values());
+
+        // Kisiler.txt → yolcuları ilgili araçlara ekler
+        kisiler = DosyaOkuma.kisileriOku(Path.of("Kisiler.txt"), aracHarita);
+
+        // ► Yolcu almayan araçları başlangıçta IMHA yap ◄
+        for (UzayAraci a : uzayAraclari) {
+            // Kesin IMHA olacak mı? (tüm yolcular varışa kadar ölecek mi?)
+            boolean yolcuYok = a.getYolcular().isEmpty();
+            boolean tumOlurMu;
+            if (yolcuYok) {
+                tumOlurMu = true;
+            } else {
+                long bekleme = 0;
+                if (a.getDurum()==UzayAraci.Durum.BEKLIYOR) {
+                    bekleme = a.getCikisGezegeni().getZaman()
+                              .kacSaatSonra(a.getCikisTarihi(), a.getCikisGezegeni().getGundekiSaatSayisi());
+                    if (bekleme < 0) bekleme = 0; // olası negatif durum
+                }
+                long toplamKalacak = bekleme + a.getKalanMesafeSaat();
+                tumOlurMu = a.getYolcular().stream()
+                              .allMatch(k -> k.getKalanOmurSaat() < toplamKalacak);
+            }
+            boolean imhaGoster = (a.getDurum()==UzayAraci.Durum.IMHA) || tumOlurMu;
+
+            String kalan     = imhaGoster ? "--" : String.valueOf(a.getKalanMesafeSaat());
+            String varisTari = imhaGoster ? "--" : a.getHedefVarisTarihi().getTarih().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            System.out.printf("%-"+ARAC_ADI_W+"s %-"+DURUM_W+"s %-"+GEZEGEN_W+"s %-"+GEZEGEN_W+"s %"+KALANSAAT_W+"s %"+VARISTARIH_W+"s
+",
+                    a.getAd(), a.getDurum(), a.getCikisGezegeni().getAd(), a.getVarisGezegeni().getAd(), kalan, varisTari);
+        }("%"+GEZEGEN_SUTUN+"s", "--- " + g.getAd() + " ---");
+        System.out.println();
+
+        // Tarih satırı
+        System.out.print("Tarih   ");
+        for (Gezegen g : gezegenler) System.out.printf("%"+GEZEGEN_SUTUN+"s", g.getZaman().getTarih().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")));
+        System.out.println();
+
+        // Nüfus satırı
+        System.out.print("Nüfus   ");
+        for (Gezegen g : gezegenler) System.out.printf("%"+GEZEGEN_SUTUN+"d", nufuslar.get(g.getAd()));
+        System.out.println("\n");
+
+        // --- Uzay Araçları ---
+        System.out.println("Uzay Araçları:");
+        System.out.printf("%-"+ARAC_ADI_W+"s %-"+DURUM_W+"s %-"+GEZEGEN_W+"s %-"+GEZEGEN_W+"s %"+KALANSAAT_W+"s %"+VARISTARIH_W+"s\n",
+                "Araç", "Durum", "Çıkış", "Varış", "Kalan", "VarışT");
+
+        for (UzayAraci a : uzayAraclari) {
+            String kalan = (a.getDurum()==UzayAraci.Durum.IMHA || a.getYolcular().isEmpty()) ? "--" : String.valueOf(a.getKalanMesafeSaat());
+            String varisTari = (a.getDurum()==UzayAraci.Durum.IMHA || a.getYolcular().isEmpty()) ? "--" : a.getHedefVarisTarihi().getTarih().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+            System.out.printf("%-"+ARAC_ADI_W+"s %-"+DURUM_W+"s %-"+GEZEGEN_W+"s %-"+GEZEGEN_W+"s %"+KALANSAAT_W+"s %"+VARISTARIH_W+"s\n",
+                    a.getAd(), a.getDurum(), a.getCikisGezegeni().getAd(), a.getVarisGezegeni().getAd(), kalan, varisTari);
+        }
+    }
+
+    private void boslukYaz(int n){
+        for(int i=0;i<n;i++) System.out.print(' ');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Yardımcılar
+    // ---------------------------------------------------------------------------
+    private void ekranTemizle() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
+    private void uyut(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+}

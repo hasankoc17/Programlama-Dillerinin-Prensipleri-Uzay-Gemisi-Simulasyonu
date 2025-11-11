@@ -1,0 +1,194 @@
+/**
+*
+* @author Mehmet Bedir SEVİMLİ  mehmet.sevimli@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* UzayAraci sınıfı, kişileri taşıyan ve gezegenler arası seyahat eden uzay araçlarını temsil eder.
+* </p>
+*/
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+
+public class UzayAraci {
+
+    // Uzay aracının adı (örneğin "A", "B", "C")
+    private String ad;
+
+    // Uzay aracının çıkış yapacağı gezegenin adı
+    private String cikisGezegeni;
+
+    // Uzay aracının varacağı hedef gezegenin adı
+    private String varisGezegeni;
+
+    // Uzay aracının çıkış tarihi (gün.ay.yıl formatında)
+    private String cikisTarihi;
+
+    // İki gezegen arasındaki mesafe (saat cinsinden)
+    private int mesafeSaatCinsinden;
+
+    // Uzay aracındaki yolcuların listesi
+    private List<Kisi> yolcular;
+
+    // Hedefe varmaya kalan saat
+    private int hedefeKalanSaat;
+
+    // Uzay aracının mevcut durumu: "BEKLIYOR", "YOLDA", "VARDI", "IMHA"
+    private String durum;
+
+    // Aracın hedefe varacağı tarih (varış tarihi)
+    private String hedefeVaracagiTarih;
+
+    // Yeni bir uzay aracı nesnesi oluşturur ve başlangıç değerlerini atar.
+    public UzayAraci(String ad, String cikisGezegeni, String varisGezegeni,
+                     String cikisTarihi, int mesafeSaatCinsinden) {
+        this.ad = ad;
+        this.cikisGezegeni = cikisGezegeni;
+        this.varisGezegeni = varisGezegeni;
+        this.cikisTarihi = cikisTarihi;
+        this.mesafeSaatCinsinden = mesafeSaatCinsinden;
+        this.yolcular = new ArrayList<>();
+        this.hedefeKalanSaat = 0; // Yolculuk başlamadan önce sıfır
+        this.durum = "BEKLIYOR"; // İlk durumda bekliyor
+        this.hedefeVaracagiTarih = "--"; // Başlangıçta bilinmiyor
+    }
+
+    // --- GET ve SET metodları ---
+
+    public String getAd() {
+        return ad;
+    }
+
+    public void setAd(String ad) {
+        this.ad = ad;
+    }
+
+    public String getCikisGezegeni() {
+        return cikisGezegeni;
+    }
+
+    public void setCikisGezegeni(String cikisGezegeni) {
+        this.cikisGezegeni = cikisGezegeni;
+    }
+
+    public String getVarisGezegeni() {
+        return varisGezegeni;
+    }
+
+    public void setVarisGezegeni(String varisGezegeni) {
+        this.varisGezegeni = varisGezegeni;
+    }
+
+    public String getCikisTarihi() {
+        return cikisTarihi;
+    }
+
+    public void setCikisTarihi(String cikisTarihi) {
+        this.cikisTarihi = cikisTarihi;
+    }
+
+    public int getMesafeSaatCinsinden() {
+        return mesafeSaatCinsinden;
+    }
+
+    public void setMesafeSaatCinsinden(int mesafeSaatCinsinden) {
+        this.mesafeSaatCinsinden = mesafeSaatCinsinden;
+    }
+
+    public List<Kisi> getYolcular() {
+        return yolcular;
+    }
+
+    public void setYolcular(List<Kisi> yolcular) {
+        this.yolcular = yolcular;
+    }
+
+    public int getHedefeKalanSaat() {
+        return hedefeKalanSaat;
+    }
+
+    public void setHedefeKalanSaat(int hedefeKalanSaat) {
+        this.hedefeKalanSaat = hedefeKalanSaat;
+    }
+
+    public String getDurum() {
+        return durum;
+    }
+
+    public void setDurum(String durum) {
+        this.durum = durum;
+    }
+
+    public String getHedefeVaracagiTarih() {
+        return hedefeVaracagiTarih;
+    }
+
+    public void setHedefeVaracagiTarih(String hedefeVaracagiTarih) {
+        this.hedefeVaracagiTarih = hedefeVaracagiTarih;
+    }
+
+    // --- Davranış Metodları ---
+
+    // Uzay aracı çıkış yapar. Durumu "YOLDA" olur ve hedefe kalan saat mesafe kadar ayarlanır.
+    public void cikisYap() {
+        this.durum = "YOLDA";
+        this.hedefeKalanSaat = this.mesafeSaatCinsinden;
+    }
+
+    // Çıkış anında çıkış gezegeninin saatine göre hedefe varış tarihini hesaplayan çıkış metodu
+    public void cikisYap(Gezegen cikisG, Gezegen varisG) {
+        this.durum = "YOLDA";
+        this.hedefeKalanSaat = this.mesafeSaatCinsinden;
+
+        int cikisSaat = cikisG.getAnlikSaat(); // Çıkış anındaki saat
+        int gunUzunlugu = varisG.getGunBirimininSaatSayisi(); // Varış gezegeninin bir günü kaç saat
+
+        int toplamSaat = cikisSaat + mesafeSaatCinsinden;
+        int eklenecekGun = toplamSaat / gunUzunlugu;
+
+        LocalDate cikisTarih = LocalDate.parse(this.cikisTarihi, DateTimeFormatter.ofPattern("d.M.yyyy"));
+        LocalDate varisTarih = cikisTarih.plusDays(eklenecekGun);
+
+        this.hedefeVaracagiTarih = varisTarih.format(DateTimeFormatter.ofPattern("dd.MM.uuuu"));
+    }
+
+    // Her bir saat geçtikçe çağrılır. Yolcuların ömrü azalır, ölenler çıkarılır, tüm yolcular ölürse araç imha olur.
+    public void saatiIlerle() {
+        if ("YOLDA".equals(durum)) {
+            if (hedefeKalanSaat > 0) {
+                hedefeKalanSaat--;
+            }
+
+            Iterator<Kisi> it = yolcular.iterator();
+            while (it.hasNext()) {
+                Kisi yolcu = it.next();
+                yolcu.omurAzalt(1);
+                if (yolcu.olduMu()) {
+                    it.remove();
+                }
+            }
+
+            if (yolcular.isEmpty()) {
+                this.durum = "IMHA";
+                this.hedefeKalanSaat = 0;
+                this.hedefeVaracagiTarih = "--";
+            }
+        }
+    }
+
+    // Uzay aracının varışa ulaşıp ulaşmadığını kontrol eder
+    public boolean varisaUlastiMi() {
+        return (!"IMHA".equals(durum)) && (hedefeKalanSaat <= 0) && "YOLDA".equals(durum);
+    }
+
+    // Araç varışa ulaştığında çağrılır, durum güncellenir
+    public void varisaUlasti(String varisTarihi) {
+        this.durum = "VARDI";
+        this.hedefeKalanSaat = 0;
+        this.hedefeVaracagiTarih = varisTarihi;
+    }
+}

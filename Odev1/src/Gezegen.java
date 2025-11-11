@@ -1,0 +1,72 @@
+/**
+*
+* @author Hasan KOÇ  hasan.koc7@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Kendi takvimini ve gün içi saat ilerlemesini yöneten, nüfus hesabı için referans olan gezegen varlığıdır.
+* </p>
+*/
+
+import java.util.Objects;
+
+// Bir gezegeni temsil eder.
+// • Her gezegenin kendine özgü gün uzunluğu (saat cinsinden) ve bir “gezegen takvimi” vardır.
+// • Simülasyon başladığında gezegenin saat kısmı 00:00 kabul edilir; gün bilgisi dosyadan gelir.
+public class Gezegen {
+
+    private final String ad;                 // Gezegene verilen isim (X, Y, Z …)
+    private final int    gundekiSaatSayisi;  // O gezegende 1 gün kaç saat sürer
+    private       Zaman  zaman;              // Gezegendeki gün + saat bilgisi
+
+    // ► Evrensel mutlak saat sayacı (program başlangıcından itibaren) — isteğe bağlı ama global hesaplamalar için pratik
+    private long mutlakSaat;                 // 0’dan başlar, her saat +1
+
+    // Kurucu
+    public Gezegen(String ad, int gundekiSaatSayisi, Zaman baslangicTarihi) {
+        this.ad  = Objects.requireNonNull(ad, "ad null olamaz");
+        if (gundekiSaatSayisi <= 0) throw new IllegalArgumentException("gundekiSaatSayisi > 0 olmalıdır");
+        this.gundekiSaatSayisi = gundekiSaatSayisi;
+        this.zaman = Objects.requireNonNull(baslangicTarihi, "baslangicTarihi null olamaz");
+        this.mutlakSaat = 0; // Programın start anı referans alınır
+    }
+
+    // Gezegendeki zamanı 1 saat ilerletir
+    public void birSaatIlerle() {
+        zaman = zaman.birSaatIleri(gundekiSaatSayisi);
+        mutlakSaat++;
+    }
+
+    // Gerektiğinde n saat ileri alınabilir
+    public void saatleriIlerle(long saat) {
+        zaman = zaman.saatEkle(saat, gundekiSaatSayisi);
+        mutlakSaat += saat;
+    }
+
+    /* ---------------- GETTER’LAR ---------------- */
+
+    public String getAd()                 { return ad; }
+    public int    getGundekiSaatSayisi()  { return gundekiSaatSayisi; }
+    public Zaman  getZaman()              { return zaman; }
+    public long   getMutlakSaat()         { return mutlakSaat; }
+
+    // Zamanın kopyası dışarı verilirse dışarıdan değiştirilemez
+    public Zaman zamanKopyasi()           { return new Zaman(zaman); }
+
+    @Override
+    public String toString() {
+        return String.format("%s | %s (Gün %d saat)", ad, zaman.toString(), gundekiSaatSayisi);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Gezegen)) return false;
+        Gezegen g = (Gezegen) obj;
+        return ad.equals(g.ad);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ad);
+    }
+}

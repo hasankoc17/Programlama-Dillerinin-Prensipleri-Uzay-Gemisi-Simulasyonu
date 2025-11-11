@@ -1,0 +1,123 @@
+/**
+*
+* @author Hasan KOÇ  hasan.koc7@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Saatlik döngüyü işleten, tüm varlıkları güncelleyen ve ekrana istenen formatta çıktıyı yazdıran ana çalıştırıcıdır.
+* </p>
+*/
+
+
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+// Simülasyonu yöneten ana sınıf – çıktı biçimi bire bir örnek görselle uyumlu
+public class Simulasyon {
+
+    /* ---------------- Konsol hizalama sabitleri (mono‑space) ---------------- */
+    private static final int GEZEGEN_GEN  = 15;   // "--- X ---" için uygun
+    private static final int W_ARAC_ADI   = 8;    // "Araç Adı"
+    private static final int W_DURUM      = 10;   // "Bekliyor" 8, biraz boşluk
+    private static final int W_GEZ        = 7;    // X / Y / Z
+    private static final int W_KALAN      = 19;   // "Hedefe Kalan Saat"
+    private static final int W_VARIS      = 22;   // "Hedefe Varacağı Tarih"
+    private static final DateTimeFormatter DF = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+    /* ----------------------------------------------------------------------- */
+    private List<Gezegen>  gezegenler;
+    private List<UzayAraci> uzayAraclari;
+    private List<Kisi>      kisiler;
+
+    public static void main(String[] args) { new Simulasyon().baslat(); }
+
+    private void baslat() {
+        try {
+            verileriYukle();
+            simulasyonuCalistir();
+            temizle(); ekraniYazdir();
+            System.out.println("Simülasyon tamamlandı.");
+        } catch (IOException e) { System.err.println("Dosya hatası: "+e.getMessage()); }
+    }
+
+    /* ------------------------- VERİ YÜKLEME ------------------------- */
+    private void verileriYukle() throws IOException {
+        gezegenler = DosyaOkuma.gezegenleriOku(Path.of("Gezegenler.txt"));
+        Map<String,Gezegen> gMap = new HashMap<>();
+        for (Gezegen g: gezegenler) gMap.put(g.getAd(), g);
+        Map<String,UzayAraci> aMap = DosyaOkuma.araclariOku(Path.of("Araclar.txt"), gMap);
+        uzayAraclari = new ArrayList<>(aMap.values());
+        kisiler = DosyaOkuma.kisileriOku(Path.of("Kisiler.txt"), aMap);
+        uzayAraclari.forEach(UzayAraci::olumKontroluYap);
+    }
+
+    /* --------------------------- DÖNGÜ ----------------------------- */
+    private void simulasyonuCalistir() {
+        while (!bittiMi()) {
+            temizle();
+            gezegenler.forEach(Gezegen::birSaatIlerle);
+            uzayAraclari.forEach(a->{ if(a.cikisAninaGeldiMi()) a.cikisYap(); a.birSaatIlerle(); a.olumKontroluYap(); });
+            kisiler.forEach(Kisi::birSaatGecir);
+            ekraniYazdir();
+            uyut(60);
+        }
+    }
+
+    /* -------------------------- ÇIKTI ------------------------------ */
+    private void ekraniYazdir() {
+        Map<String,Integer> nufus = nufusHarita();
+
+        // Gezegenler başlığı
+        System.out.println("Gezegenler:\n");
+        bosluk(9);
+        for (Gezegen g: gezegenler) System.out.printf("%"+GEZEGEN_GEN+"s", "--- "+g.getAd()+" ---");
+        System.out.println();
+        System.out.print("Tarih   ");
+        for (Gezegen g: gezegenler) System.out.printf("%"+GEZEGEN_GEN+"s", g.getZaman().getTarih().format(DF));
+        System.out.println();
+        System.out.print("Nüfus   ");
+        for (Gezegen g: gezegenler) System.out.printf("%"+GEZEGEN_GEN+"d", nufus.get(g.getAd()));
+        System.out.println("\n");
+
+        // Uzay Araçları başlığı
+        System.out.println("Uzay Araçları:");
+        System.out.printf("%-"+W_ARAC_ADI+"s %-"+W_DURUM+"s %-"+W_GEZ+"s %-"+W_GEZ+"s %"+W_KALAN+"s %"+W_VARIS+"s\n",
+                "Araç Adı", "Durum", "Çıkış", "Varış", "Hedefe Kalan Saat", "Hedefe Varacağı Tarih");
+
+        for (UzayAraci a: uzayAraclari) {
+            boolean imhaGoster = kesinImha(a);
+            String kalan  = imhaGoster ? "--" : String.valueOf(a.getKalanMesafeSaat());
+            String vTarih = imhaGoster ? "--" : a.getHedefVarisTarihi().getTarih().format(DF);
+            System.out.printf("%-"+W_ARAC_ADI+"s %-"+W_DURUM+"s %-"+W_GEZ+"s %-"+W_GEZ+"s %"+W_KALAN+"s %"+W_VARIS+"s\n",
+                    a.getAd(), a.getDurum(), a.getCikisGezegeni().getAd(), a.getVarisGezegeni().getAd(), kalan, vTarih);
+        }
+    }
+
+    /* ---------------------- YARDIMCI METOTLAR ---------------------- */
+    private Map<String,Integer> nufusHarita() {
+        Map<String,Integer> m=new HashMap<>(); gezegenler.forEach(g->m.put(g.getAd(),0));
+        for(UzayAraci a: uzayAraclari){int c=(int)a.getYolcular().stream().filter(k->!k.olduMu()).count();
+            if(c==0) continue;
+            if(a.getDurum()==UzayAraci.Durum.BEKLIYOR) m.merge(a.getCikisGezegeni().getAd(),c,Integer::sum);
+            else if(a.getDurum()==UzayAraci.Durum.VARDI) m.merge(a.getVarisGezegeni().getAd(),c,Integer::sum);
+        }return m;}
+
+    private boolean kesinImha(UzayAraci a){
+        if (a.getDurum()==UzayAraci.Durum.IMHA) return true;  // zaten imha
+        if (a.getDurum()==UzayAraci.Durum.VARDI) return false; // hedefine ulaştı → tarihle göster
+        if (a.getYolcular().isEmpty()) return true;            // bekliyor/yolda ve yolcu yok → imha
+        long bek = (a.getDurum()==UzayAraci.Durum.BEKLIYOR)
+                ? Math.max(0, a.getCikisGezegeni().getZaman()
+                        .kacSaatSonra(a.getCikisTarihi(), a.getCikisGezegeni().getGundekiSaatSayisi()))
+                : 0;
+        long total = bek + a.getKalanMesafeSaat();
+        return a.getYolcular().stream().allMatch(k -> k.getKalanOmurSaat() < total);
+    }
+
+    private boolean bittiMi(){ for(UzayAraci a: uzayAraclari) if(a.getDurum()==UzayAraci.Durum.BEKLIYOR||a.getDurum()==UzayAraci.Durum.YOLDA) return false; return true; }
+    private void temizle(){ System.out.print("\033[H\033[2J"); System.out.flush(); }
+    private void uyut(long ms){ try{Thread.sleep(ms);}catch(InterruptedException e){Thread.currentThread().interrupt();} }
+    private void bosluk(int n){ for(int i=0;i<n;i++) System.out.print(' '); }
+}

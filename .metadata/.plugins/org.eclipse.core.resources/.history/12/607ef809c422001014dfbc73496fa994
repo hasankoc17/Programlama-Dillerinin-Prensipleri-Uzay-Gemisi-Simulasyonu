@@ -1,0 +1,171 @@
+package tr.edu.simulasyon;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// Simülasyonu yöneten ana sınıf – tamamen derlenebilir son sürüm
+public class Simulasyon {
+
+    /* --------- Konsol hizalama sabitleri (mono‑space) --------- */
+    private static final int GEZEGEN_SUTUN = 15;
+    private static final int ARAC_ADI_W    = 6;
+    private static final int DURUM_W       = 8;
+    private static final int GEZ_W         = 6;
+    private static final int KALAN_W       = 8;
+    private static final int VARIS_W       = 12;
+    private static final DateTimeFormatter DF = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+    /* ---------------------------------------------------------- */
+
+    private List<Gezegen>  gezegenler;
+    private List<UzayAraci> uzayAraclari;
+    private List<Kisi>      kisiler;
+
+    // -------------------- main --------------------
+    public static void main(String[] args) {
+        new Simulasyon().baslat();
+    }
+
+    // ---------------- Başlatıcı ------------------
+    public void baslat() {
+        try {
+            verileriYukle();
+            simulasyonuCalistir();
+            ekranTemizle();
+            ekraniYazdir();
+            System.out.println("Simülasyon tamamlandı.");
+        } catch (IOException e) {
+            System.err.println("Veriler okunurken hata: " + e.getMessage());
+        }
+    }
+
+    // --------------- Dosya okuma -----------------
+    private void verileriYukle() throws IOException {
+        gezegenler = DosyaOkuma.gezegenleriOku(Path.of("Gezegenler.txt"));
+
+        Map<String,Gezegen> gezHarita = new HashMap<>();
+        for (Gezegen g: gezegenler) gezHarita.put(g.getAd(), g);
+
+        Map<String,UzayAraci> aracHarita = DosyaOkuma.araclariOku(Path.of("Araclar.txt"), gezHarita);
+        uzayAraclari = new ArrayList<>(aracHarita.values());
+
+        kisiler = DosyaOkuma.kisileriOku(Path.of("Kisiler.txt"), aracHarita);
+
+        // Yolcusu olmayan araçları baştan IMHA yap
+        uzayAraclari.forEach(UzayAraci::olumKontroluYap);
+    }
+
+    // --------------- Ana döngü -------------------
+    private void simulasyonuCalistir() {
+        while (!tumAraclarBittiMi()) {
+            ekranTemizle();
+            gezegenSaatleriniIlerle();
+            araclariGuncelle();
+            kisileriGuncelle();
+            ekraniYazdir();
+            uyut(60); // animasyon hızı
+        }
+    }
+
+    // ------------ Saat ilerletmeleri -------------
+    private void gezegenSaatleriniIlerle() {
+        gezegenler.forEach(Gezegen::birSaatIlerle);
+    }
+
+    private void araclariGuncelle() {
+        for (UzayAraci a: uzayAraclari) {
+            if (a.cikisAninaGeldiMi()) a.cikisYap();
+            a.birSaatIlerle();
+            a.olumKontroluYap();
+        }
+    }
+
+    private void kisileriGuncelle() { kisiler.forEach(Kisi::birSaatGecir); }
+
+    // --------------- Bitiş kontrolü ---------------
+    private boolean tumAraclarBittiMi() {
+        for (UzayAraci a: uzayAraclari) {
+            if (a.getDurum()==UzayAraci.Durum.BEKLIYOR || a.getDurum()==UzayAraci.Durum.YOLDA)
+                return false;
+        }
+        return true;
+    }
+
+    // --------------- Nüfus hesaplama --------------
+    private Map<String,Integer> gezegenNufusHaritasi() {
+        Map<String,Integer> harita = new HashMap<>();
+        for (Gezegen g: gezegenler) harita.put(g.getAd(), 0);
+
+        for (UzayAraci a: uzayAraclari) {
+            int canli = yolcuSayisiCanli(a);
+            if (canli==0) continue;
+            if (a.getDurum()==UzayAraci.Durum.BEKLIYOR) {
+                harita.compute(a.getCikisGezegeni().getAd(), (k,v)-> v+canli);
+            } else if (a.getDurum()==UzayAraci.Durum.VARDI) {
+                harita.compute(a.getVarisGezegeni().getAd(), (k,v)-> v+canli);
+            }
+        }
+        return harita;
+    }
+
+    private int yolcuSayisiCanli(UzayAraci a) {
+        int s=0; for (Kisi k: a.getYolcular()) if(!k.olduMu()) s++; return s; }
+
+    // --------------- Ekran Yazdırma ---------------
+    private void ekraniYazdir() {
+        Map<String,Integer> nufus = gezegenNufusHaritasi();
+
+        // Gezegen başlıkları
+        System.out.println("Gezegenler:");
+        boslukYaz(9);
+        for (Gezegen g: gezegenler) System.out.printf("%"+GEZEGEN_SUTUN+"s", "--- "+g.getAd()+" ---");
+        System.out.println();
+
+        // Tarih satırı
+        System.out.print("Tarih   ");
+        for (Gezegen g: gezegenler) System.out.printf("%"+GEZEGEN_SUTUN+"s", g.getZaman().getTarih().format(DF));
+        System.out.println();
+
+        // Nüfus satırı
+        System.out.print("Nüfus   ");
+        for (Gezegen g: gezegenler) System.out.printf("%"+GEZEGEN_SUTUN+"d", nufus.get(g.getAd()));
+        System.out.println("\n");
+
+        // Uzay Araçları
+        System.out.println("Uzay Araçları:");
+        System.out.printf("%-"+ARAC_ADI_W+"s %-"+DURUM_W+"s %-"+GEZ_W+"s %-"+GEZ_W+"s %"+KALAN_W+"s %"+VARIS_W+"s\n",
+                "Araç", "Durum", "Çıkış", "Varış", "Kalan", "VarışT");
+
+        for (UzayAraci a: uzayAraclari) {
+            boolean kesinImha = hesaplaKesinImha(a);
+            String kalan   = kesinImha ? "--" : String.valueOf(a.getKalanMesafeSaat());
+            String vTarih  = kesinImha ? "--" : a.getHedefVarisTarihi().getTarih().format(DF);
+            System.out.printf("%-"+ARAC_ADI_W+"s %-"+DURUM_W+"s %-"+GEZ_W+"s %-"+GEZ_W+"s %"+KALAN_W+"s %"+VARIS_W+"s\n",
+                    a.getAd(), a.getDurum(), a.getCikisGezegeni().getAd(), a.getVarisGezegeni().getAd(), kalan, vTarih);
+        }
+    }
+
+    private boolean hesaplaKesinImha(UzayAraci a) {
+        if (a.getDurum()==UzayAraci.Durum.IMHA) return true;
+        if (a.getYolcular().isEmpty()) return true;
+
+        long bekleme = 0;
+        if (a.getDurum()==UzayAraci.Durum.BEKLIYOR) {
+            bekleme = a.getCikisGezegeni().getZaman().kacSaatSonra(a.getCikisTarihi(), a.getCikisGezegeni().getGundekiSaatSayisi());
+            if (bekleme<0) bekleme = 0;
+        }
+        long toplamKalan = bekleme + a.getKalanMesafeSaat();
+        return a.getYolcular().stream().allMatch(k -> k.getKalanOmurSaat() < toplamKalan);
+    }
+
+    private void boslukYaz(int n){ for(int i=0;i<n;i++) System.out.print(' '); }
+
+    // --------------- Yardımcılar ------------------
+    private void ekranTemizle() { System.out.print("\033[H\033[2J"); System.out.flush(); }
+    private void uyut(long ms){ try{Thread.sleep(ms);}catch(InterruptedException e){Thread.currentThread().interrupt();} }
+}

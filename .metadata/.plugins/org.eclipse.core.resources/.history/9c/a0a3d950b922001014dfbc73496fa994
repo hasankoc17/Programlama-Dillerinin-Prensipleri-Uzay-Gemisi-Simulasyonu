@@ -1,0 +1,120 @@
+
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+// Bir uzay aracını temsil eder.
+// Uzay aracı bir çıkış gezegeninden varış gezegenine doğru hareket eder.
+// İçinde yolcular (Kisi nesneleri) bulunur.
+public class UzayAraci {
+
+    public enum Durum {
+        BEKLIYOR, YOLDA, VARISTI, IMHA
+    }
+
+    private final String ad;            // Aracın ismi
+    private final Gezegen cikisGezegeni;// Çıkış yaptığı gezegen
+    private final Gezegen varisGezegeni;// Varış yapacağı gezegen
+    private final Zaman cikisTarihi;    // Çıkış yapacağı tarih
+    private final int toplamMesafe;     // Saat cinsinden toplam mesafe
+    private final Zaman hedefVarisTarihi; // Hedefe varış tarihi (program başında hesaplanır)
+
+    private int kalanMesafe;            // Varışa kalan saat
+    private Durum durum;                // Aracın güncel durumu
+    private final List<Kisi> yolcular;  // Araçtaki kişiler
+
+    // Kurucu
+    public UzayAraci(String ad, Gezegen cikisGezegeni, Gezegen varisGezegeni, Zaman cikisTarihi, int toplamMesafe) {
+        this.ad = Objects.requireNonNull(ad, "ad null olamaz");
+        this.cikisGezegeni = Objects.requireNonNull(cikisGezegeni, "cikisGezegeni null olamaz");
+        this.varisGezegeni = Objects.requireNonNull(varisGezegeni, "varisGezegeni null olamaz");
+        this.cikisTarihi = Objects.requireNonNull(cikisTarihi, "cikisTarihi null olamaz");
+        if (toplamMesafe < 0) {
+            throw new IllegalArgumentException("toplamMesafe negatif olamaz");
+        }
+        this.toplamMesafe = toplamMesafe;
+        this.kalanMesafe = toplamMesafe;
+        this.durum = Durum.BEKLIYOR;
+        this.yolcular = new ArrayList<>();
+        this.hedefVarisTarihi = varisGezegeni.getZaman().saatEkle(toplamMesafe, varisGezegeni.getGundekiSaatSayisi());
+    }
+
+    // Araç çıkış yapıyor mu diye kontrol eder
+    public boolean cikisYapabilirMi() {
+        return durum == Durum.BEKLIYOR && cikisGezegeni.getZaman().compareTo(cikisTarihi) >= 0;
+    }
+
+    // Aracı çıkışa geçirir
+    public void cikisYap() {
+        if (durum == Durum.BEKLIYOR) {
+            durum = Durum.YOLDA;
+        }
+    }
+
+    // 1 saatlik ilerleme yapar
+    public void birSaatIlerle() {
+        if (durum == Durum.YOLDA) {
+            kalanMesafe--;
+            if (kalanMesafe <= 0) {
+                kalanMesafe = 0;
+                durum = Durum.VARISTI;
+            }
+        }
+    }
+
+    // Araçtaki ölü yolcuları temizler
+    public void olumKontroluYap() {
+        yolcular.removeIf(kisi -> kisi.olduMu());
+        if (yolcular.isEmpty() && durum != Durum.VARISTI) {
+            durum = Durum.IMHA;
+        }
+    }
+
+    // Araca yolcu ekler
+    public void yolcuEkle(Kisi kisi) {
+        yolcular.add(Objects.requireNonNull(kisi, "kisi null olamaz"));
+    }
+
+    // Getter’lar
+    public String getAd() {
+        return ad;
+    }
+
+    public Gezegen getCikisGezegeni() {
+        return cikisGezegeni;
+    }
+
+    public Gezegen getVarisGezegeni() {
+        return varisGezegeni;
+    }
+
+    public Zaman getCikisTarihi() {
+        return cikisTarihi;
+    }
+
+    public int getToplamMesafe() {
+        return toplamMesafe;
+    }
+
+    public int getKalanMesafe() {
+        return kalanMesafe;
+    }
+
+    public Durum getDurum() {
+        return durum;
+    }
+
+    public List<Kisi> getYolcular() {
+        return yolcular;
+    }
+
+    public Zaman getHedefVarisTarihi() {
+        return hedefVarisTarihi;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s (%s -> %s)", ad, cikisGezegeni.getAd(), varisGezegeni.getAd());
+    }
+}

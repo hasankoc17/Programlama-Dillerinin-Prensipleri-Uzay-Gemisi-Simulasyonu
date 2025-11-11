@@ -1,0 +1,134 @@
+/**
+*
+* @author Mehmet Bedir SEVİMLİ  mehmet.sevimli@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* DosyaOkuma sınıfı, txt dosyalarından verileri okuyarak nesne listeleri oluşturan yardımcı bir sınıftır.
+* </p>
+*/
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DosyaOkuma {
+
+    // Kisiler.txt dosyasını okuyarak her satırdan bir Kisi nesnesi oluşturur ve bunları bir liste halinde döndürür.
+    public static List<Kisi> kisileriOku(String dosyaYolu) {
+        List<Kisi> kisiler = new ArrayList<>();
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(dosyaYolu))) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                // Satır boşsa veya sadece boşluklardan oluşuyorsa atla
+                if (satir.trim().isEmpty()) {
+                    continue;
+                }
+                // Satırı # karakterine göre ayır
+                String[] parcalar = satir.split("#");
+                if (parcalar.length < 4) {
+                    System.err.println("Geçersiz satır (Kisi): " + satir);
+                    continue;
+                }
+
+                // Parçalanan verileri uygun tiplere dönüştür
+                String ad = parcalar[0];
+                int yas = Integer.parseInt(parcalar[1]);
+                int kalanOmur = Integer.parseInt(parcalar[2]);
+                String bulunduguAracAdi = parcalar[3];
+
+                // Yeni Kisi nesnesi oluştur ve listeye ekle
+                Kisi kisi = new Kisi(ad, yas, kalanOmur, bulunduguAracAdi);
+                kisiler.add(kisi);
+            }
+        } catch (IOException e) {
+            System.err.println("Kisiler.txt dosyası okunurken hata oluştu: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.err.println("Kişi bilgisi parse edilirken sayı formatı hatası: " + e.getMessage());
+        }
+        
+        return kisiler;
+    }
+
+    // Araclar.txt dosyasını okuyarak her satırdan bir UzayAraci nesnesi oluşturur ve bunları bir liste halinde döndürür.
+    public static List<UzayAraci> uzayAraclariniOku(String dosyaYolu) {
+        List<UzayAraci> araclar = new ArrayList<>();
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(dosyaYolu))) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                if (satir.trim().isEmpty()) {
+                    continue;
+                }
+                String[] parcalar = satir.split("#");
+                if (parcalar.length < 5) {
+                    System.err.println("Geçersiz satır (UzayAraci): " + satir);
+                    continue;
+                }
+
+                // Satırdaki verileri ayrıştır ve uygun türlere dönüştür
+                String aracAdi = parcalar[0];
+                String cikisGezegeni = parcalar[1];
+                String varisGezegeni = parcalar[2];
+                String cikisTarihi = parcalar[3];
+                int mesafeSaatCinsinden = Integer.parseInt(parcalar[4]);
+
+                // Yeni UzayAraci nesnesi oluştur ve listeye ekle
+                UzayAraci uzayAraci = new UzayAraci(
+                        aracAdi,
+                        cikisGezegeni,
+                        varisGezegeni,
+                        cikisTarihi,
+                        mesafeSaatCinsinden
+                );
+                araclar.add(uzayAraci);
+            }
+        } catch (IOException e) {
+            System.err.println("Araclar.txt dosyası okunurken hata oluştu: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.err.println("Araç bilgisi parse edilirken sayı formatı hatası: " + e.getMessage());
+        }
+        
+        return araclar;
+    }
+
+    // Gezegenler.txt dosyasını okuyarak her satırdan bir Gezegen nesnesi oluşturur ve bunları bir liste halinde döndürür.
+    public static List<Gezegen> gezegenleriOku(String dosyaYolu) {
+        List<Gezegen> gezegenler = new ArrayList<>();
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(dosyaYolu))) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                if (satir.trim().isEmpty()) {
+                    continue;
+                }
+                String[] parcalar = satir.split("#");
+                if (parcalar.length < 3) {
+                    System.err.println("Geçersiz satır (Gezegen): " + satir);
+                    continue;
+                }
+
+                // Satırdan gelen verileri ayrıştır
+                String gezegenAdi = parcalar[0];
+                int gunBirimininSaatSayisi = Integer.parseInt(parcalar[1]);
+                String baslangicTarihi = parcalar[2];
+
+                // Yeni Gezegen nesnesi oluştur ve listeye ekle
+                Gezegen gezegen = new Gezegen(
+                        gezegenAdi,
+                        gunBirimininSaatSayisi,
+                        baslangicTarihi
+                );
+                gezegenler.add(gezegen);
+            }
+        } catch (IOException e) {
+            System.err.println("Gezegenler.txt dosyası okunurken hata oluştu: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.err.println("Gezegen bilgisi parse edilirken sayı formatı hatası: " + e.getMessage());
+        }
+        
+        return gezegenler;
+    }
+}

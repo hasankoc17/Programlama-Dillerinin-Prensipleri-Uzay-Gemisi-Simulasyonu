@@ -1,0 +1,67 @@
+
+import java.util.Objects;
+
+// Bir gezegeni temsil eder.
+// Her gezegenin kendine özgü bir saatlik gün uzunluğu ve gezegen tarihi vardır.
+public class Gezegen {
+
+    private final String ad;            // Gezegene verilen isim
+    private final int gundekiSaatSayisi; // O gezegende 1 gün kaç saat sürüyor
+    private Zaman zaman;                // Gezegendeki gün ve saat bilgisi
+
+    // Kurucu
+    public Gezegen(String ad, int gundekiSaatSayisi, Zaman zaman) {
+        this.ad = Objects.requireNonNull(ad, "ad null olamaz");
+        if (gundekiSaatSayisi <= 0) {
+            throw new IllegalArgumentException("gundekiSaatSayisi > 0 olmalıdır");
+        }
+        this.gundekiSaatSayisi = gundekiSaatSayisi;
+        this.zaman = Objects.requireNonNull(zaman, "zaman null olamaz");
+    }
+
+    // Gezegendeki zamanı 1 saat ileri alır
+    public void birSaatIlerle() {
+        this.zaman = this.zaman.birSaatIleri(gundekiSaatSayisi);
+    }
+
+    // Gezegendeki zamanı istenen kadar saat ileri alır
+    public void saatleriIlerle(long saatSayisi) {
+        this.zaman = this.zaman.saatEkle(saatSayisi, gundekiSaatSayisi);
+    }
+
+    // Getter’lar
+    public String getAd() {
+        return ad;
+    }
+
+    public int getGundekiSaatSayisi() {
+        return gundekiSaatSayisi;
+    }
+
+    public Zaman getZaman() {
+        return zaman;
+    }
+
+    // Gezegendeki zamanın kopyası alınır (dışarıdan değiştirilemesin diye)
+    public Zaman zamanKopyasi() {
+        return new Zaman(zaman);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s - Zaman: %s (Gün %d saat)", ad, zaman.toString(), gundekiSaatSayisi);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Gezegen)) return false;
+        Gezegen diger = (Gezegen) obj;
+        return ad.equals(diger.ad);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ad);
+    }
+}

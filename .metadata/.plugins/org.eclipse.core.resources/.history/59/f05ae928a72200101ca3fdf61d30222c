@@ -1,0 +1,295 @@
+/**
+*
+* @author Mehmet Bedir SEVİMLİ  mehmet.sevimli@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Simulasyon sınıfı, tüm sistemi yönetir ve çalıştırır
+* </p>
+*/
+
+import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+
+public class Simulasyon {
+
+    // Ana listeler
+    private List<Gezegen> gezegenListesi;
+    private List<UzayAraci> uzayAraciListesi;
+    private List<Kisi> kisiListesi;
+
+    public static void main(String[] args) {
+        Simulasyon simulasyon = new Simulasyon();
+        simulasyon.verileriOkuVeBaslat();
+    }
+
+    /**
+     * Dosyalardan verileri okur, ilk atamaları yapar ve döngüyü başlatır.
+     */
+    public void verileriOkuVeBaslat() {
+        // 1) Dosyaları oku
+        kisiListesi = DosyaOkuma.kisileriOku("Kisiler.txt");
+        uzayAraciListesi = DosyaOkuma.uzayAraclariniOku("Araclar.txt");
+        gezegenListesi = DosyaOkuma.gezegenleriOku("Gezegenler.txt");
+
+        // 2) Kişileri ilgili uzay aracına ekle
+        kisileriUzayAracinaAta();
+
+        // İlk nüfus bilgilerini sıfırla ve güncelle
+        nufusGuncelle();
+
+        // Başlangıç durumunu yazdır
+        ekraniTemizle();
+        durumuYazdir();
+
+        // 3) Saat döngüsü ile ilerle
+        calistirDongu();
+
+        // 4) Döngü bittiğinde (tüm araçlar VARDI ya da IMHA), son durumu yazdır
+        ekraniTemizle();
+        durumuYazdir();
+
+        System.out.println("Simulasyon tamamlandi!");
+    }
+
+    /**
+     * Her saatlik döngüyü yönetir.
+     * Tüm araçlar "VARDI" veya "IMHA" durumuna geçtiğinde döngü sonlanır.
+     */
+    private void calistirDongu() {
+        boolean devam = true;
+        while (devam) {
+            // 1. Her gezegenin zamanını 1 saat ilerlet
+            for (Gezegen g : gezegenListesi) {
+                g.zamanIlerle(1);
+            }
+
+            // 2. Araçların durumlarını güncelle
+            for (UzayAraci arac : uzayAraciListesi) {
+                if (arac.getDurum().equals("BEKLIYOR")) {
+                    // Aracın çıkış gezegenini bul
+                    Gezegen cikisGezegeni = gezegenBul(arac.getCikisGezegeni());
+                    if (cikisGezegeni != null) {
+                        // Tarihler eşitse araç yola çıksın
+                        String gezegenTarihi = cikisGezegeni.getTarihStr(); 
+                        if (gezegenTarihi.equals(arac.getCikisTarihi())) {
+                        	arac.cikisYap(cikisGezegeni, gezegenBul(arac.getVarisGezegeni()));
+
+                        }
+                    }
+                }
+                else if (arac.getDurum().equals("YOLDA")) {
+                    // 1 saatlik ilerleme (yolcuların ömrü azalır, hedefe kalan saat düşer vb.)
+                    arac.saatiIlerle();
+                    // Varış kontrolü
+                    if (arac.varisaUlastiMi()) {
+                        // Aracın varış gezegenini bul
+                        Gezegen varisG = gezegenBul(arac.getVarisGezegeni());
+                        if (varisG != null) {
+                            // O gezegenin anlık tarihini al
+                            String varisTarihi = varisG.getTarihStr();
+                            arac.varisaUlasti(varisTarihi);
+                        } else {
+                            // Varış gezegeni bulunamazsa teorik olarak hata
+                            arac.varisaUlasti("--");
+                        }
+                    }
+                }
+                // IMHA ve VARDI durumunda ek bir işlem yapılmıyor
+            }
+
+            // 3. Nüfusu güncelle (Hangi araçtaki yolcular hangi gezegene dahil?)
+            nufusGuncelle();
+
+            // 4. Ekranı temizle ve durumu yazdır
+            ekraniTemizle();
+            durumuYazdir();
+
+            // 5. Tüm araçlar VARDI veya IMHA olduysa döngüyü bitir
+            if (tumAraclarTamamlandi()) {
+                devam = false;
+            }
+        }
+    }
+
+    /**
+     * Kişileri, `Kisi.getBulunduguAracAdi()` alanına göre ilgili uzay aracına ekler.
+     */
+    private void kisileriUzayAracinaAta() {
+        // Herkesi ilgili araca yerleştir
+        for (Kisi kisi : kisiListesi) {
+            String aracAdi = kisi.getBulunduguAracAdi();
+            UzayAraci arac = uzayAraciBul(aracAdi);
+            if (arac != null) {
+                arac.getYolcular().add(kisi);
+            } 
+            else {
+                // Böyle bir araç yoksa, bu kişi araçsız kabul edilebilir
+                // Ama senaryoya göre "arac yoksa ne yapmalı?" kararlaştırılabilir.
+            }
+        }
+    }
+
+    /**
+     * Tüm gezegenlerin nüfusunu sıfırlar, ardından
+     * - "BEKLİYOR" durumundaki araçtaki yolcuları çıkışGezegenine
+     * - "VARDI" durumundaki araçtaki yolcuları varışGezegenine
+     * ekler. "YOLDA" ve "IMHA" durumunda olanlar hiçbir gezegene dahil edilmez.
+     */
+    private void nufusGuncelle() {
+        // Önce tüm gezegenlerin nüfusunu 0 yap
+        for (Gezegen g : gezegenListesi) {
+            g.setNufus(0);
+        }
+
+        // Araçların yolcu sayısına göre ilgili gezegenlerin nüfusunu güncelle
+        for (UzayAraci arac : uzayAraciListesi) {
+            List<Kisi> yolcular = arac.getYolcular();
+            int yolcuSayisi = yolcular.size();
+
+            String durum = arac.getDurum();
+            if (durum.equals("BEKLIYOR")) {
+                // Çıkış gezegenine dahil
+                Gezegen cG = gezegenBul(arac.getCikisGezegeni());
+                if (cG != null) {
+                    cG.nufusArttir(yolcuSayisi);
+                }
+            } 
+            else if (durum.equals("VARDI")) {
+                // Varış gezegenine dahil
+                Gezegen vG = gezegenBul(arac.getVarisGezegeni());
+                if (vG != null) {
+                    vG.nufusArttir(yolcuSayisi);
+                }
+            }
+            // YOLDA veya IMHA -> hiçbir gezegene eklenmez
+        }
+    }
+
+    /**
+     * Tüm araçlar "VARDI" veya "IMHA" durumuna geçmiş mi kontrolü.
+     */
+    private boolean tumAraclarTamamlandi() {
+        for (UzayAraci arac : uzayAraciListesi) {
+            if (!arac.getDurum().equals("VARDI") && !arac.getDurum().equals("IMHA")) {
+                return false; 
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Kısa yöntem: Uzay aracını adıyla bulur.
+     */
+    private UzayAraci uzayAraciBul(String aracAdi) {
+        for (UzayAraci u : uzayAraciListesi) {
+            if (u.getAd().equals(aracAdi)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gezegen bulma (Gezegen adıyla).
+     */
+    private Gezegen gezegenBul(String gezegenAdi) {
+        for (Gezegen g : gezegenListesi) {
+            if (g.getAd().equals(gezegenAdi)) {
+                return g;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Ekranı temizlemek için basit bir yöntem:
+     * Çok sayıda boş satır yazalım (ANSI escape vs. yerine).
+     */
+    private void ekraniTemizle() {
+        for(int i = 0; i < 50; i++) {
+            System.out.println();
+        }
+    }
+
+    /**
+     * Mevcut durumu (tüm gezegenler ve araçlar) ekrana yazar.
+     * Örnek formatta tablo yapısına yakın bir biçim izleyebilirsin.
+     */
+    private void durumuYazdir() {
+        System.out.println("Gezegenler:\n");
+
+        // Gezegen Başlıkları
+        int genislik = 13;
+
+        System.out.print("         ");
+        for (Gezegen g : gezegenListesi) {
+            System.out.print(ortala("--- " + g.getAd() + " ---", genislik));
+        }
+        System.out.println();
+
+        System.out.print("Tarih    ");
+        for (Gezegen g : gezegenListesi) {
+            System.out.print(ortala(g.getTarihStr(), genislik));
+        }
+        System.out.println();
+
+        System.out.print("Nufus    ");
+        for (Gezegen g : gezegenListesi) {
+            System.out.print(ortala(String.valueOf(g.getNufus()), genislik));
+        }
+        System.out.println();
+
+
+        System.out.println("\n");
+
+        // Uzay Araçları Başlığı
+        System.out.println("Uzay Araclari:\n");
+        System.out.printf("%-10s %-10s %-8s %-8s %-20s %-20s\n",
+            "Arac Adi", "Durum", "Cikis", "Varis", "Hedefe Kalan Saat", "Hedefe Varacagi Tarih");
+
+        for (UzayAraci arac : uzayAraciListesi) {
+            String kalanSaatStr = arac.getDurum().equals("IMHA") ? "--" : String.valueOf(arac.getHedefeKalanSaat());
+            String varisTarihiStr = arac.getDurum().equals("IMHA") ? "--" : arac.getHedefeVaracagiTarih();
+
+            // Yoldayken hedefe varış tarihi kalan saatten yeniden hesaplanır
+            if (arac.getDurum().equals("YOLDA")) {
+                Gezegen varisG = gezegenBul(arac.getVarisGezegeni());
+                if (varisG != null) {
+                    int kalan = arac.getHedefeKalanSaat();
+                    int gunUz = varisG.getGunBirimininSaatSayisi();
+                    int ekGun = kalan / gunUz;
+
+                    LocalDate gTarih = LocalDate.parse(
+                        varisG.getTarihStr(),
+                        DateTimeFormatter.ofPattern("dd.MM.uuuu")
+                    );
+
+                    LocalDate eta = gTarih.plusDays(ekGun);
+                    varisTarihiStr = eta.format(DateTimeFormatter.ofPattern("dd.MM.uuuu"));
+                }
+            }
+
+            System.out.printf("%-10s %-10s %-8s %-8s %-20s %-20s\n",
+                arac.getAd(),
+                arac.getDurum(),
+                arac.getCikisGezegeni(),
+                arac.getVarisGezegeni(),
+                kalanSaatStr,
+                varisTarihiStr
+            );
+        }
+
+        System.out.println();
+    }
+
+    private String ortala(String veri, int genislik) {
+        int bosluk = genislik - veri.length();
+        int sol = bosluk / 2;
+        int sag = bosluk - sol;
+        return " ".repeat(Math.max(0, sol)) + veri + " ".repeat(Math.max(0, sag));
+    }
+
+
+}

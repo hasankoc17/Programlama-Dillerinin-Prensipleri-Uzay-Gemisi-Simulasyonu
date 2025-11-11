@@ -1,0 +1,89 @@
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.util.ArrayList;
+import java.util.List;
+
+// UzayAraci sınıfı, bir gezegenden başka bir gezegene insan taşıyan uzay aracını temsil eder.
+public class UzayAraci {
+
+    private static final DateTimeFormatter dateFormat = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.DAY_OF_MONTH)
+            .appendLiteral('.')
+            .appendValue(ChronoField.MONTH_OF_YEAR)
+            .appendLiteral('.')
+            .appendValue(ChronoField.YEAR)
+            .toFormatter();
+
+    private String ad;
+    private String cikisGezegeni;
+    private String varisGezegeni;
+    private final LocalDate cikisTarihDate;
+    private final String cikisTarihStr;
+    private int mesafeSaatCinsinden;
+    private List<Kisi> yolcular;
+    private int hedefeKalanSaat;
+    private String durum;
+    private String hedefeVaracagiTarih;
+
+    public UzayAraci(String ad, String cikisGezegeni, String varisGezegeni, String cikisRaw, int mesafeSaatCinsinden) {
+        this.ad = ad;
+        this.cikisGezegeni = cikisGezegeni;
+        this.varisGezegeni = varisGezegeni;
+        this.cikisTarihStr = cikisRaw.trim();
+        this.cikisTarihDate = LocalDate.parse(this.cikisTarihStr, dateFormat);
+        this.mesafeSaatCinsinden = mesafeSaatCinsinden;
+        this.yolcular = new ArrayList<>();
+        this.hedefeKalanSaat = 0;
+        this.durum = "BEKLIYOR";
+        this.hedefeVaracagiTarih = "--";
+    }
+
+    public void cikisYap(Gezegen cikisG, Gezegen varisG) {
+        this.durum = "YOLDA";
+        this.hedefeKalanSaat = this.mesafeSaatCinsinden;
+
+        int cikisSaat = cikisG.getAnlikSaat();
+        int gunUzunlugu = varisG.getGunBirimininSaatSayisi();
+        int toplamSaat = cikisSaat + mesafeSaatCinsinden;
+        int ekGun = toplamSaat / gunUzunlugu;
+
+        LocalDate varisTarih = this.cikisTarihDate.plusDays(ekGun);
+        this.hedefeVaracagiTarih = varisTarih.format(DateTimeFormatter.ofPattern("dd.MM.uuuu"));
+    }
+
+    public void hedefeKalanSaatAzalt() {
+        if (durum.equals("YOLDA") && hedefeKalanSaat > 0) {
+            hedefeKalanSaat--;
+            yolcular.removeIf(kisi -> {
+                kisi.omurAzalt(1);
+                return kisi.olduMu();
+            });
+
+            if (yolcular.isEmpty()) {
+                durum = "IMHA";
+                hedefeKalanSaat = 0;
+                hedefeVaracagiTarih = "--";
+            }
+        }
+    }
+
+    public void varisYap() {
+        if (durum.equals("YOLDA")) {
+            durum = "VARDI";
+            hedefeKalanSaat = 0;
+        }
+    }
+
+    public String getAd() { return ad; }
+    public String getCikisGezegeni() { return cikisGezegeni; }
+    public String getVarisGezegeni() { return varisGezegeni; }
+    public String getCikisTarihi() { return cikisTarihStr; }
+    public LocalDate getCikisTarihiDate() { return cikisTarihDate; }
+    public int getMesafeSaatCinsinden() { return mesafeSaatCinsinden; }
+    public List<Kisi> getYolcular() { return yolcular; }
+    public int getHedefeKalanSaat() { return hedefeKalanSaat; }
+    public String getDurum() { return durum; }
+    public String getHedefeVaracagiTarih() { return hedefeVaracagiTarih; }
+}

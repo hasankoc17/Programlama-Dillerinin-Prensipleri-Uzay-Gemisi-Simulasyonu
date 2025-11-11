@@ -1,0 +1,105 @@
+/**
+*
+* @author Mehmet Bedir SEVİMLİ  mehmet.sevimli@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Zaman sınıfı, bir gezegende geçen zamanı (tarih ve saat) yönetir.
+* </p>
+*/
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoField;
+import java.time.format.DateTimeFormatterBuilder;
+
+
+public class Zaman {
+
+    // Geçerli tarihi LocalDate tipinde tutar (örneğin: 05.10.2020)
+    private LocalDate gecerliTarih;
+
+    // Bir günün kaç saatten oluştuğunu belirtir (örneğin 24 saat)
+    private int gunBirimininSaatSayisi;
+
+    // O anki gün içindeki saat (0 ile gunBirimininSaatSayisi - 1 arasında değer alır)
+    private int anlikSaat;
+
+    // Tarihlerin okunması için kullanılan biçimlendirici (d.M.yyyy)
+    private static final DateTimeFormatter BICIM = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.DAY_OF_MONTH)   // 1‥31  (0’lı veya 0’sız)
+            .appendLiteral('.')
+            .appendValue(ChronoField.MONTH_OF_YEAR)  // 1‥12
+            .appendLiteral('.')
+            .appendValue(ChronoField.YEAR, 4)        // 4 haneli yıl
+            .toFormatter()
+            .withResolverStyle(ResolverStyle.STRICT);
+
+    // Başlangıç tarihi ve gün uzunluğuna göre yeni bir Zaman nesnesi oluşturur
+    public Zaman(String baslangicTarihi, int gunBirimininSaatSayisi) {
+        this.gecerliTarih = tarihCoz(baslangicTarihi);
+        this.gunBirimininSaatSayisi = gunBirimininSaatSayisi;
+        this.anlikSaat = 0; // Başlangıçta saat 00:00 kabul edilir
+    }
+
+    // Verilen tarih dizesini (örneğin: "05.10.2020") LocalDate tipine dönüştürür
+    private LocalDate tarihCoz(String tarihDizesi) {
+        try {
+            return LocalDate.parse(tarihDizesi, BICIM);
+        } catch (DateTimeParseException e) {
+            System.err.println("Tarih parse edilirken hata oluştu: " + tarihDizesi);
+            throw e;
+        }
+    }
+
+    // Zamanı verilen saat miktarı kadar ilerletir
+    // Eğer anlık saat bir günün sınırını aşarsa bir sonraki güne geçilir
+    public void zamaniIlerle(int saat) {
+        anlikSaat += saat;
+
+        // Eğer anlikSaat bir günü aştıysa, gün atlayarak güncelle
+        while (anlikSaat >= gunBirimininSaatSayisi) {
+            anlikSaat -= gunBirimininSaatSayisi;
+            gecerliTarih = gecerliTarih.plusDays(1);
+        }
+    }
+
+    // Mevcut tarihi "dd.MM.yyyy" formatında döndürür (başında sıfırlar dahil)
+    public String getTarihStr() {
+        DateTimeFormatter yazdirmaFormat = DateTimeFormatter.ofPattern("dd.MM.uuuu");
+        return gecerliTarih.format(yazdirmaFormat);
+    }
+
+    // Gün içindeki anlık saati döndürür (örneğin: 6 gibi)
+    public int getAnlikSaat() {
+        return anlikSaat;
+    }
+
+    // Hem tarih hem de saat bilgisini birlikte döndürür
+    // Örneğin: "05.10.2020 06:00"
+    public String getTarihVeSaat() {
+        return String.format("%s %02d:00", getTarihStr(), anlikSaat);
+    }
+
+    // Bir günün kaç saatten oluştuğunu döndürür
+    public int getGunBirimininSaatSayisi() {
+        return gunBirimininSaatSayisi;
+    }
+
+    // Bir günün saat sayısını değiştirmek için kullanılır
+    public void setGunBirimininSaatSayisi(int gunBirimininSaatSayisi) {
+        this.gunBirimininSaatSayisi = gunBirimininSaatSayisi;
+    }
+
+    // Geçerli tarihi değiştirmek için kullanılır
+    public void setTarih(String yeniTarih) {
+        this.gecerliTarih = tarihCoz(yeniTarih);
+    }
+
+    // Anlık saat bilgisini değiştirmek için kullanılır
+    // Eğer verilen saat bir günü aşarsa mod alınarak normalize edilir
+    public void setAnlikSaat(int saat) {
+        this.anlikSaat = saat % gunBirimininSaatSayisi;
+    }
+}

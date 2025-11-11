@@ -1,0 +1,74 @@
+
+
+import java.util.Objects;
+
+// Bir kişiyi temsil eder.
+// Her kişi bir uzay aracında bulunur ve belirli bir kalan ömür saatine sahiptir.
+public class Kisi {
+
+    private final String ad;          // Kişinin ismi
+    private final int yas;            // Kişinin yaşı
+    private int kalanOmurSaat;         // Saat cinsinden kalan ömür
+    private final UzayAraci uzayAraci; // Bulunduğu uzay aracı
+
+    // Kurucu
+    public Kisi(String ad, int yas, int kalanOmurSaat, UzayAraci uzayAraci) {
+        this.ad = Objects.requireNonNull(ad, "ad null olamaz");
+        if (yas < 0) {
+            throw new IllegalArgumentException("yas negatif olamaz");
+        }
+        if (kalanOmurSaat < 0) {
+            throw new IllegalArgumentException("kalanOmurSaat negatif olamaz");
+        }
+        this.yas = yas;
+        this.kalanOmurSaat = kalanOmurSaat;
+        this.uzayAraci = Objects.requireNonNull(uzayAraci, "uzayAraci null olamaz");
+    }
+
+    // 1 saatlik zaman ilerlemesi
+    public void birSaatGecir() {
+        if (kalanOmurSaat > 0) {
+            kalanOmurSaat--;
+        }
+    }
+
+    // Kişi ölmüş mü diye kontrol eder
+    public boolean olduMu() {
+        return kalanOmurSaat <= 0;
+    }
+
+    // Getter’lar
+    public String getAd() {
+        return ad;
+    }
+
+    public int getYas() {
+        return yas;
+    }
+
+    public int getKalanOmurSaat() {
+        return kalanOmurSaat;
+    }
+
+    public UzayAraci getUzayAraci() {
+        return uzayAraci;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s (%d yas, %d saat omur)", ad, yas, kalanOmurSaat);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Kisi)) return false;
+        Kisi diger = (Kisi) obj;
+        return ad.equals(diger.ad) && yas == diger.yas && uzayAraci.equals(diger.uzayAraci);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(ad, yas, uzayAraci);
+    }
+}

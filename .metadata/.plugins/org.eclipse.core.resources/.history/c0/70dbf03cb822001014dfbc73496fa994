@@ -1,0 +1,141 @@
+package tr.edu.simulasyon;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// Simülasyonu yöneten ana sınıf
+public class Simulasyon {
+
+    private List<Gezegen> gezegenler;
+    private List<UzayAraci> uzayAraclari;
+    private List<Kisi> kisiler;
+
+    // Programın başlangıç metodu
+    public static void main(String[] args) {
+        Simulasyon simulasyon = new Simulasyon();
+        simulasyon.baslat();
+    }
+
+    // Simülasyonu başlatır
+    public void baslat() {
+        try {
+            verileriYukle();
+            simulasyonuCalistir();
+            sonDurumuGoster();
+        } catch (IOException e) {
+            System.err.println("Veriler okunurken hata oluştu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Dosyalardan verileri yükler
+    private void verileriYukle() throws IOException {
+        gezegenler = DosyaOkuma.gezegenleriOku(Path.of("Gezegenler.txt"));
+
+        Map<String, Gezegen> gezegenHaritasi = new HashMap<>();
+        for (Gezegen g : gezegenler) {
+            gezegenHaritasi.put(g.getAd(), g);
+        }
+
+        Map<String, UzayAraci> aracHaritasi = DosyaOkuma.araclariOku(Path.of("Araclar.txt"), gezegenHaritasi);
+        uzayAraclari = new ArrayList<>(aracHaritasi.values());
+
+        kisiler = DosyaOkuma.kisileriOku(Path.of("Kisiler.txt"), aracHaritasi);
+    }
+
+    // Simülasyonu saat saat çalıştırır
+    private void simulasyonuCalistir() {
+        boolean devamEdiyor = true;
+
+        while (devamEdiyor) {
+            ekraniTemizle();
+            gezegenSaatleriniIlerle();
+            araclariGuncelle();
+            kisileriGuncelle();
+            ekraniYazdir();
+
+            devamEdiyor = !tumAraclarVarisYaptiMi();
+
+            uyut(100); // 0.1 saniye bekletme
+        }
+    }
+
+    // Gezegendeki saatleri 1 saat ilerletir
+    private void gezegenSaatleriniIlerle() {
+        for (Gezegen g : gezegenler) {
+            g.birSaatIlerle();
+        }
+    }
+
+    // Uzay araçlarının durumlarını günceller
+    private void araclariGuncelle() {
+        for (UzayAraci arac : uzayAraclari) {
+            if (arac.cikisYapabilirMi()) {
+                arac.cikisYap();
+            }
+            arac.birSaatIlerle();
+            arac.olumKontroluYap();
+        }
+    }
+
+    // Kişilerin kalan ömürlerini günceller
+    private void kisileriGuncelle() {
+        for (Kisi kisi : kisiler) {
+            kisi.birSaatGecir();
+        }
+    }
+
+    // Tüm araçlar varış yaptı mı kontrol eder
+    private boolean tumAraclarVarisYaptiMi() {
+        for (UzayAraci arac : uzayAraclari) {
+            if (arac.getDurum() == UzayAraci.Durum.BEKLIYOR || arac.getDurum() == UzayAraci.Durum.YOLDA) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Son durumu gösterir
+    private void sonDurumuGoster() {
+        ekraniTemizle();
+        ekraniYazdir();
+        System.out.println("Simülasyon tamamlandı.");
+    }
+
+    // Ekranı temizler
+    private void ekraniTemizle() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
+    // Ekrana bilgileri yazar
+    private void ekraniYazdir() {
+        System.out.println("--- GEZEGENLER ---");
+        for (Gezegen g : gezegenler) {
+            System.out.printf("%-10s Tarih: %s\n", g.getAd(), g.getZaman().toString());
+        }
+
+        System.out.println();
+
+        System.out.println("--- UZAY ARAÇLARI ---");
+        for (UzayAraci arac : uzayAraclari) {
+            String kalanSaatYazisi = arac.getDurum() == UzayAraci.Durum.IMHA ? "--" : String.valueOf(arac.getKalanMesafe());
+            String varisTarihiYazisi = arac.getDurum() == UzayAraci.Durum.IMHA ? "--" : arac.getHedefVarisTarihi().toString();
+            System.out.printf("%-5s Durum: %-8s Kalan Saat: %-5s Varis Tarihi: %s\n",
+                    arac.getAd(), arac.getDurum(), kalanSaatYazisi, varisTarihiYazisi);
+        }
+    }
+
+    // Programı kısa bir süre uyutur
+    private void uyut(int milisaniye) {
+        try {
+            Thread.sleep(milisaniye);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+}

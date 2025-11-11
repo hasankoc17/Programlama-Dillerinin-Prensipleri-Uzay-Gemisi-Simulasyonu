@@ -1,0 +1,191 @@
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.util.ArrayList;
+import java.util.List;
+
+// Simulasyon sınıfı, sistemi yönetir ve simülasyonu çalıştırır
+public class Simulasyon {
+
+    private static final DateTimeFormatter dateFormat = new DateTimeFormatterBuilder()
+            .appendValue(ChronoField.DAY_OF_MONTH)
+            .appendLiteral('.')
+            .appendValue(ChronoField.MONTH_OF_YEAR)
+            .appendLiteral('.')
+            .appendValue(ChronoField.YEAR)
+            .toFormatter();
+
+    private List<Gezegen> gezegenListesi;
+    private List<UzayAraci> uzayAraciListesi;
+    private List<Kisi> kisiListesi;
+
+    public static void main(String[] args) {
+        Simulasyon simulasyon = new Simulasyon();
+        simulasyon.verileriOkuVeBaslat();
+    }
+
+    public void verileriOkuVeBaslat() {
+        kisiListesi = DosyaOkuma.kisileriOku("Kisiler.txt");
+        uzayAraciListesi = DosyaOkuma.uzayAraclariniOku("Araclar.txt");
+        gezegenListesi = DosyaOkuma.gezegenleriOku("Gezegenler.txt");
+
+        kisileriUzayAracinaAta();
+        nufusGuncelle();
+
+        ekraniTemizle();
+        durumuYazdir();
+
+        calistirDongu();
+
+        ekraniTemizle();
+        durumuYazdir();
+
+        System.out.println("Simulasyon tamamlandi!");
+    }
+
+    private void kisileriUzayAracinaAta() {
+        for (Kisi kisi : kisiListesi) {
+            for (UzayAraci arac : uzayAraciListesi) {
+                if (kisi.getBulunduguAracAdi().equals(arac.getAd())) {
+                    arac.getYolcular().add(kisi);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void calistirDongu() {
+        boolean tumAraclarVarisYaptiMi = false;
+
+        while (!tumAraclarVarisYaptiMi) {
+            saatIlerle();
+            ekraniTemizle();
+            durumuYazdir();
+
+            tumAraclarVarisYaptiMi = true;
+            for (UzayAraci arac : uzayAraciListesi) {
+                if (arac.getDurum().equals("YOLDA")) {
+                    tumAraclarVarisYaptiMi = false;
+                    break;
+                }
+            }
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void saatIlerle() {
+        for (Gezegen gezegen : gezegenListesi) {
+            gezegen.zamaniIlerle(1);
+        }
+
+        for (UzayAraci arac : uzayAraciListesi) {
+            if (arac.getDurum().equals("BEKLIYOR")) {
+                Gezegen cikisGezegeni = gezegenBul(arac.getCikisGezegeni());
+                if (cikisGezegeni != null &&
+                    cikisGezegeni.getZaman().getTarihDate().equals(arac.getCikisTarihiDate())) {
+                    arac.cikisYap(cikisGezegeni, gezegenBul(arac.getVarisGezegeni()));
+                }
+            } else if (arac.getDurum().equals("YOLDA")) {
+                arac.hedefeKalanSaatAzalt();
+                if (arac.getHedefeKalanSaat() <= 0) {
+                    arac.varisYap();
+                }
+            }
+        }
+
+        nufusGuncelle();
+    }
+
+    private void nufusGuncelle() {
+        for (Gezegen gezegen : gezegenListesi) {
+            gezegen.setNufus(0);
+        }
+
+        for (UzayAraci arac : uzayAraciListesi) {
+            if (arac.getDurum().equals("YOLDA")) continue;
+
+            Gezegen bulunduguGezegen = gezegenBul(
+                arac.getDurum().equals("VARDI") ? arac.getVarisGezegeni() : arac.getCikisGezegeni()
+            );
+
+            if (bulunduguGezegen != null) {
+                for (Kisi kisi : arac.getYolcular()) {
+                    if (kisi.getKalanOmur() > 0) {
+                        bulunduguGezegen.nufusArttir(1);
+                    }
+                }
+            }
+        }
+    }
+
+    private Gezegen gezegenBul(String ad) {
+        for (Gezegen gezegen : gezegenListesi) {
+            if (gezegen.getAd().equals(ad)) {
+                return gezegen;
+            }
+        }
+        return null;
+    }
+
+    private void ekraniTemizle() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
+    }
+
+    private void durumuYazdir() {
+        System.out.println("Gezegenler:\n");
+
+        int genislik = 13;
+
+        System.out.print("        ");
+        for (Gezegen g : gezegenListesi) {
+            System.out.print(ortala("--- " + g.getAd() + " ---", genislik));
+        }
+        System.out.println();
+
+        System.out.print("Tarih   ");
+        for (Gezegen g : gezegenListesi) {
+            System.out.print(ortala(g.getTarihStr(), genislik));
+        }
+        System.out.println();
+
+        System.out.print("Nufus   ");
+        for (Gezegen g : gezegenListesi) {
+            System.out.print(ortala(String.valueOf(g.getNufus()), genislik));
+        }
+        System.out.println("\n");
+
+        System.out.println("Uzay Araclari:\n");
+        System.out.printf("%-10s %-10s %-8s %-8s %-20s %-20s\n",
+            "Arac Adi", "Durum", "Cikis", "Varis", "Hedefe Kalan Saat", "Hedefe Varacagi Tarih");
+
+        for (UzayAraci arac : uzayAraciListesi) {
+            String kalanSaatStr = arac.getDurum().equals("IMHA") ? "--" : String.valueOf(arac.getHedefeKalanSaat());
+            String varisTarihiStr = arac.getDurum().equals("IMHA") ? "--" : arac.getHedefeVaracagiTarih();
+
+            System.out.printf("%-10s %-10s %-8s %-8s %-20s %-20s\n",
+                arac.getAd(),
+                arac.getDurum(),
+                arac.getCikisGezegeni(),
+                arac.getVarisGezegeni(),
+                kalanSaatStr,
+                varisTarihiStr
+            );
+        }
+
+        System.out.println();
+    }
+
+    private String ortala(String veri, int genislik) {
+        int bosluk = genislik - veri.length();
+        int sol = bosluk / 2;
+        int sag = bosluk - sol;
+        return " ".repeat(Math.max(0, sol)) + veri + " ".repeat(Math.max(0, sag));
+    }
+}

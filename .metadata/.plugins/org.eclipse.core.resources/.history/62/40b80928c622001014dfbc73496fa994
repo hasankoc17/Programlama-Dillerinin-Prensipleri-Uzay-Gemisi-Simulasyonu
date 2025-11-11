@@ -1,0 +1,85 @@
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// Dosya okuma işlemlerini gerçekleştiren yardımcı sınıf
+public class DosyaOkuma {
+
+    // Gezegenleri dosyadan okur
+    public static List<Gezegen> gezegenleriOku(Path dosyaYolu) throws IOException {
+        List<Gezegen> gezegenler = new ArrayList<>();
+
+        try (BufferedReader br = Files.newBufferedReader(dosyaYolu)) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                satir = satir.trim();
+                if (satir.isEmpty()) continue;
+                String[] parcalar = satir.split("#");
+                if (parcalar.length != 3) continue;
+                String ad = parcalar[0];
+                int saatSayisi = Integer.parseInt(parcalar[1]);
+                Zaman zaman = Zaman.ayracsizParse(parcalar[2]);
+                gezegenler.add(new Gezegen(ad, saatSayisi, zaman));
+            }
+        }
+
+        return gezegenler;
+    }
+
+    // Uzay araçlarını dosyadan okur ve isimlerini anahtar yaparak döndürür
+    public static Map<String, UzayAraci> araclariOku(Path dosyaYolu, Map<String, Gezegen> gezegenler) throws IOException {
+        Map<String, UzayAraci> araclar = new HashMap<>();
+
+        try (BufferedReader br = Files.newBufferedReader(dosyaYolu)) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                satir = satir.trim();
+                if (satir.isEmpty()) continue;
+                String[] parcalar = satir.split("#");
+                if (parcalar.length != 5) continue;
+                String ad = parcalar[0];
+                Gezegen cikis = gezegenler.get(parcalar[1]);
+                Gezegen varis = gezegenler.get(parcalar[2]);
+                Zaman cikisTarihi = Zaman.ayracsizParse(parcalar[3]);
+                int mesafe = Integer.parseInt(parcalar[4]);
+                UzayAraci arac = new UzayAraci(ad, cikis, varis, cikisTarihi, mesafe);
+                araclar.put(ad, arac);
+            }
+        }
+
+        return araclar;
+    }
+
+    // Kişileri dosyadan okur ve ilgili uzay araçlarına ekler
+    public static List<Kisi> kisileriOku(Path dosyaYolu, Map<String, UzayAraci> araclar) throws IOException {
+        List<Kisi> kisiler = new ArrayList<>();
+
+        try (BufferedReader br = Files.newBufferedReader(dosyaYolu)) {
+            String satir;
+            while ((satir = br.readLine()) != null) {
+                satir = satir.trim();
+                if (satir.isEmpty()) continue;
+                String[] parcalar = satir.split("#");
+                if (parcalar.length != 4) continue;
+                String ad = parcalar[0];
+                int yas = Integer.parseInt(parcalar[1]);
+                int kalanOmur = Integer.parseInt(parcalar[2]);
+                String aracAdi = parcalar[3];
+                UzayAraci arac = araclar.get(aracAdi);
+                if (arac != null) {
+                    Kisi kisi = new Kisi(ad, yas, kalanOmur, arac);
+                    kisiler.add(kisi);
+                    arac.yolcuEkle(kisi);
+                }
+            }
+        }
+
+        return kisiler;
+    }
+}

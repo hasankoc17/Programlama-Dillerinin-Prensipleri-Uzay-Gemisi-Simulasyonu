@@ -1,0 +1,6 @@
+Ali#30#900#A
+Ayse#25#850#A
+Mehmet#40#500#B
+Veli#35#300#C
+Zeynep#20#100#D
+Ahmet#70#50#D

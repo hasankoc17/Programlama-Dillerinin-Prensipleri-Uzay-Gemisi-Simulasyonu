@@ -1,0 +1,108 @@
+/**
+*
+* @author Hasan KOÇ  hasan.koc7@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Gezegen başına saat uzunluğunu dikkate alarak gün-saat hesaplarını yapan değişmez zaman nesnesidir.
+* </p>
+*/
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Objects;
+
+// Gezegen takvimine uygun basit zaman nesnesi.
+//  – Her Zaman nesnesi yalnızca tarih (gün/ay/yıl) ve saat bilgisini tutar.
+//  – Sınıf değişmez (immutable) olup, yapılan her değişiklik yeni bir Zaman döndürür.
+public final class Zaman implements Comparable<Zaman> {
+
+    private static final DateTimeFormatter TARIH_BICIM = DateTimeFormatter.ofPattern("d.M.yyyy");
+
+    private final LocalDate tarih;   // Örnek: 5.10.2020
+    private final int saat;          // O gün içindeki saat (0‑n)
+
+    // Ana kurucu
+    public Zaman(LocalDate tarih, int saat) {
+        this.tarih = Objects.requireNonNull(tarih, "tarih null olamaz");
+        if (saat < 0) {
+            throw new IllegalArgumentException("Saat negatif olamaz: " + saat);
+        }
+        this.saat = saat;
+    }
+
+    // Kopya kurucu
+    public Zaman(Zaman diger) {
+        this(diger.tarih, diger.saat);
+    }
+
+    // Fabrika metodu
+    public static Zaman olustur(LocalDate tarih, int saat) {
+        return new Zaman(tarih, saat);
+    }
+
+    // "g.a.yyyy" metnini alır, saati 0 yapar
+    public static Zaman ayracsizParse(String tarihStr) {
+        return new Zaman(LocalDate.parse(tarihStr, TARIH_BICIM), 0);
+    }
+
+    // Getter’lar
+    public LocalDate getTarih() {
+        return tarih;
+    }
+
+    public int getSaat() {
+        return saat;
+    }
+
+    // Belirtilen kadar saat ekler/çıkarır (gezegen gün uzunluğu dikkate alınır)
+    public Zaman saatEkle(long eklenecekSaat, int gundekiSaatSayisi) {
+        if (gundekiSaatSayisi <= 0) {
+            throw new IllegalArgumentException("gundekiSaatSayisi > 0 olmalıdır");
+        }
+        if (eklenecekSaat == 0) return this;
+
+        long toplamSaat = (long) saat + eklenecekSaat;
+        long gunFarki   = Math.floorDiv(toplamSaat, gundekiSaatSayisi);
+        int  yeniSaat   = (int) Math.floorMod(toplamSaat, gundekiSaatSayisi);
+        LocalDate yeniTarih = tarih.plusDays(gunFarki);
+        return new Zaman(yeniTarih, yeniSaat);
+    }
+
+    // Tek adım saat ilerletir
+    public Zaman birSaatIleri(int gundekiSaatSayisi) {
+        return saatEkle(1, gundekiSaatSayisi);
+    }
+
+    // İki zaman arasındaki farkı saat cinsinden verir (this → future)
+    public long kacSaatSonra(Zaman gelecekteki, int gundekiSaatSayisi) {
+        Objects.requireNonNull(gelecekteki, "gelecekteki zaman null");
+        long gun = java.time.temporal.ChronoUnit.DAYS.between(this.tarih, gelecekteki.tarih);
+        return gun * gundekiSaatSayisi + (gelecekteki.saat - this.saat);
+    }
+
+    // Sıralama amaçlı karşılaştırma
+    @Override
+    public int compareTo(Zaman o) {
+        int cmp = this.tarih.compareTo(o.tarih);
+        return cmp != 0 ? cmp : Integer.compare(this.saat, o.saat);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Zaman)) return false;
+        Zaman z = (Zaman) obj;
+        return saat == z.saat && tarih.equals(z.tarih);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(tarih, saat);
+    }
+
+    // Örnek çıktı: 5.10.2020 03:00
+    @Override
+    public String toString() {
+        return String.format("%s %02d:00", tarih.format(TARIH_BICIM), saat);
+    }
+}

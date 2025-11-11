@@ -1,0 +1,87 @@
+/**
+*
+* @author Mehmet Bedir SEVİMLİ  mehmet.sevimli@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Kisi sınıfı, uzay aracındaki bir bireyin adını, yaşını, kalan ömrünü ve bulunduğu aracı temsil eder.
+* </p>
+*/
+
+
+public class Kisi {
+
+    // Kişinin adı (örneğin: "Ahmet", "Ayşe" vb.)
+    private String ad;
+
+    // Kişinin yaşı
+    private int yas;
+
+    // Kalan ömrü (saat cinsinden). 0 veya daha az olduğunda kişi ölü kabul edilir.
+    private int kalanOmur;
+
+    // Kişinin bulunduğu uzay aracı adı
+    private String bulunduguAracAdi;
+
+    // Kisi nesnesi oluşturur. Ad, yaş, kalan ömür ve bulunduğu araç bilgilerini alır.
+    public Kisi(String ad, int yas, int kalanOmur, String bulunduguAracAdi) {
+        this.ad = ad;
+        this.yas = yas;
+        this.kalanOmur = kalanOmur;
+        this.bulunduguAracAdi = bulunduguAracAdi;
+    }
+
+    // Kişinin adını döndürür.
+    public String getAd() {
+        return ad;
+    }
+
+    // Kişinin adını değiştirir.
+    public void setAd(String ad) {
+        this.ad = ad;
+    }
+
+    // Kişinin yaşını döndürür.
+    public int getYas() {
+        return yas;
+    }
+
+    // Kişinin yaşını değiştirir.
+    public void setYas(int yas) {
+        this.yas = yas;
+    }
+
+    // Kişinin kalan ömrünü döndürür.
+    public int getKalanOmur() {
+        return kalanOmur;
+    }
+
+    // Kişinin kalan ömrünü değiştirir.
+    public void setKalanOmur(int kalanOmur) {
+        this.kalanOmur = kalanOmur;
+    }
+
+    // Kişinin bulunduğu uzay aracının adını döndürür.
+    public String getBulunduguAracAdi() {
+        return bulunduguAracAdi;
+    }
+
+    // Kişinin bulunduğu uzay aracının adını değiştirir.
+    public void setBulunduguAracAdi(String bulunduguAracAdi) {
+        this.bulunduguAracAdi = bulunduguAracAdi;
+    }
+
+    // Belirtilen saat kadar kişinin kalan ömrünü azaltır.
+    // Eğer kalan ömür 0'ın altına düşerse sıfırlanır.
+    public void omurAzalt(int saat) {
+        this.kalanOmur -= saat;
+        if (this.kalanOmur < 0) {
+            this.kalanOmur = 0;
+        }
+    }
+
+    // Kişinin ölüp ölmediğini kontrol eder.
+    // Kalan ömür 0 veya daha azsa true döner, aksi halde false.
+    public boolean olduMu() {
+        return this.kalanOmur <= 0;
+    }
+}

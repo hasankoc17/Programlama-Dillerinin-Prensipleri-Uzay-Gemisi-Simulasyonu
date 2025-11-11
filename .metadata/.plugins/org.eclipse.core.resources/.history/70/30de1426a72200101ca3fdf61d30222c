@@ -1,0 +1,103 @@
+/**
+*
+* @author Mehmet Bedir SEVİMLİ  mehmet.sevimli@ogr.sakarya.edu.tr
+* @since 26.04.2025
+* <p>
+* Gezegen sınıfı, bir gezegenin adını, nüfusunu ve zamanını (tarih, saat) yönetmek için kullanılır.
+* </p>
+*/
+
+public class Gezegen {
+
+    // Gezegenin adı (örn: "X", "Y", "Z")
+    private String ad;
+    
+    // Gezegendeki mevcut nüfus miktarı
+    private int nufus;
+    
+    // Gezegene ait zaman bilgilerini tutan Zaman sınıfı nesnesi
+    private Zaman zaman;
+
+    // Yeni bir Gezegen nesnesi oluşturur.
+    // Başlangıçta nüfus sıfır olarak başlar ve verilen başlangıç tarihi ile zaman başlatılır.
+    public Gezegen(String ad, int gunBirimininSaatSayisi, String baslangicTarihi) {
+        this.ad = ad;
+        this.nufus = 0;
+        this.zaman = new Zaman(baslangicTarihi, gunBirimininSaatSayisi);
+    }
+
+    // Gezegenin adını döndürür.
+    public String getAd() {
+        return ad;
+    }
+
+    // Gezegenin adını değiştirir.
+    public void setAd(String ad) {
+        this.ad = ad;
+    }
+
+    // Gezegendeki mevcut nüfus sayısını döndürür.
+    public int getNufus() {
+        return nufus;
+    }
+
+    // Nüfus değerini doğrudan belirler.
+    public void setNufus(int nufus) {
+        this.nufus = nufus;
+    }
+
+    // Belirtilen sayı kadar nüfusu artırır.
+    // Eğer sonrasında nüfus negatif olursa 0 yapılır.
+    public void nufusArttir(int sayi) {
+        this.nufus += sayi;
+        if (this.nufus < 0) {
+            this.nufus = 0;
+        }
+    }
+
+    // Belirtilen sayı kadar nüfusu azaltır.
+    // Negatif nüfus olmasını engeller.
+    public void nufusAzalt(int sayi) {
+        this.nufus -= sayi;
+        if (this.nufus < 0) {
+            this.nufus = 0;
+        }
+    }
+
+    // Gezegenin zaman nesnesine doğrudan erişim sağlar.
+    public Zaman getZaman() {
+        return zaman;
+    }
+
+    // Gezegende geçen zamanı saat cinsinden ilerletir.
+    // İçeride Zaman sınıfının zamaniIlerle() fonksiyonu çalışır.
+    public void zamanIlerle(int saat) {
+        this.zaman.zamaniIlerle(saat);
+    }
+
+    // Gezegenin o anki tarihini (örneğin: "05.10.2020") string olarak döndürür.
+    public String getTarihStr() {
+        return this.zaman.getTarihStr();
+    }
+
+    // Gezegenin o andaki gün içi saatini (örneğin: 6) döndürür.
+    public int getAnlikSaat() {
+        return this.zaman.getAnlikSaat();
+    }
+
+    // Gezegenin o anki tarih ve saat bilgisini birlikte string olarak döndürür.
+    // (örneğin: "05.10.2020 06:00")
+    public String getTarihVeSaat() {
+        return this.zaman.getTarihVeSaat();
+    }
+
+    // Gezegenin bir gününün kaç saatten oluştuğunu öğrenir.
+    public int getGunBirimininSaatSayisi() {
+        return this.zaman.getGunBirimininSaatSayisi();
+    }
+
+    // Gezegenin gün uzunluğunu değiştirmek için kullanılır.
+    public void setGunBirimininSaatSayisi(int gunBirimininSaatSayisi) {
+        this.zaman.setGunBirimininSaatSayisi(gunBirimininSaatSayisi);
+    }
+}
